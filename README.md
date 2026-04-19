@@ -1,19 +1,95 @@
-# React + TypeScript + Vite
+# Frontend - React + Vite + TypeScript + Tailwind CSS
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern frontend application built with React 19, Vite, TypeScript, and Tailwind CSS.
 
-Currently, two official plugins are available:
+## 🚀 Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Prerequisites
+- Node.js 18+
+- npm or yarn
 
-## React Compiler
+### Installation
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+```
 
-## Expanding the ESLint configuration
+### Development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Run the development server:
+
+```bash
+npm run dev
+```
+
+The app will be available at `http://localhost:5173`
+
+### Build
+
+Build for production:
+
+```bash
+npm run build
+```
+
+### Preview
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+### Lint
+
+Check code quality:
+
+```bash
+npm run lint
+```
+
+## 📋 Tech Stack
+
+- **React 19** - UI library
+- **Vite** - Build tool and dev server
+- **TypeScript** - Type-safe JavaScript
+- **Tailwind CSS** - Utility-first CSS framework
+- **ESLint** - Code linting
+- **PostCSS** - CSS processing with Tailwind
+
+## 📁 Project Structure
+
+```
+src/
+├── App.tsx          # Main app component
+├── index.css        # Global styles (Tailwind)
+├── main.tsx         # Entry point
+└── assets/          # Static assets
+
+public/             # Public assets
+dist/               # Build output
+```
+
+## 🎨 Tailwind CSS
+
+Tailwind CSS is configured and ready to use. All utility classes are available:
+
+```tsx
+<div className="bg-blue-500 text-white p-4 rounded-lg">
+  Styled with Tailwind CSS
+</div>
+```
+
+## 🚀 Deployment
+
+This frontend can be deployed using the CI/CD pipeline from the backend repository or as a standalone application.
+
+## 📝 Notes
+
+- Hot Module Replacement (HMR) is enabled for fast development
+- TypeScript strict mode is enabled
+- ESLint is configured for React best practices
+- Tailwind CSS is optimized for production
 
 ```js
 export default defineConfig([
