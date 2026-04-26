@@ -89,17 +89,34 @@ jobs:
           path: dist/
 
       - name: Configure AWS credentials
+        id: aws-config
         uses: aws-actions/configure-aws-credentials@v4
+        continue-on-error: true
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Check AWS Configuration
+        run: |
+          if [ "${{ steps.aws-config.outcome }}" == "failure" ]; then
+            echo "⚠️ AWS credentials not configured. Skipping deployment."
+            echo ""
+            echo "To enable deployment, add these secrets to your repository:"
+            echo "  - AWS_ACCESS_KEY_ID"
+            echo "  - AWS_SECRET_ACCESS_KEY"
+            echo ""
+            echo "Settings: https://github.com/vellaidurai-r/front-end-repo/settings/secrets/actions"
+            exit 0
+          fi
+
       - name: Login to Amazon ECR
         id: login-ecr
+        if: ${{ steps.aws-config.outcome == 'success' }}
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag, and push image to ECR
+        if: ${{ steps.aws-config.outcome == 'success' }}
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ needs.determine-environment.outputs.ecr-repo }}
@@ -112,6 +129,7 @@ jobs:
           echo "IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Update ECS service
+        if: ${{ steps.aws-config.outcome == 'success' }}
         env:
           CLUSTER: ${{ needs.determine-environment.outputs.cluster }}
           SERVICE: ${{ needs.determine-environment.outputs.service }}
@@ -144,6 +162,7 @@ jobs:
           echo "Service deployment status: $SERVICE_STATUS"
 
       - name: Wait for service stability
+        if: ${{ steps.aws-config.outcome == 'success' }}
         env:
           CLUSTER: ${{ needs.determine-environment.outputs.cluster }}
           SERVICE: ${{ needs.determine-environment.outputs.service }}
@@ -181,6 +200,7 @@ jobs:
           done
 
       - name: Post deployment info
+        if: ${{ steps.aws-config.outcome == 'success' }}
         env:
           ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
           CLUSTER: ${{ needs.determine-environment.outputs.cluster }}
