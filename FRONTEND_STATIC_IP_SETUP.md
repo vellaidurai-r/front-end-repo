@@ -30,33 +30,29 @@ Due to IAM permission constraints with GitHub Actions, the association needs to 
 3. Click **"Actions"** → **"Associate Elastic IP address"**
 4. Select:
    - Resource type: **Network interface**
-   - Network interface: **eni-0c8912e6670bc2de7**
-   - Private IP address: **172.31.0.233**
+   - Network interface: **eni-0fc7162ad03161ecb** ⚠️ UPDATED (changed from eni-0c8912e6670bc2de7)
+   - Private IP address: **172.31.0.144** ⚠️ UPDATED (changed from 172.31.0.233)
 5. Click **"Associate"**
 
 #### Frontend Staging
 1. Go to **AWS EC2 Dashboard** → **Elastic IPs**
 2. Find IP: `54.252.205.222`
 3. Click **"Actions"** → **"Associate Elastic IP address"**
-4. Get the current staging task's network interface ID:
-   ```bash
-   aws ecs list-tasks --cluster my-node-api-cluster-staging --service-name frontend-service-staging --region ap-southeast-2 --query 'taskArns[0]' --output text
-   # Then describe to get the ENI
-   ```
-5. Select that network interface
-6. Click **"Associate"**
+4. Select:
+   - Resource type: **Network interface**
+   - Network interface: **eni-0bc48913bb17d808a**
+   - Private IP address: **172.31.6.201**
+5. Click **"Associate"**
 
 #### Frontend Prod
 1. Go to **AWS EC2 Dashboard** → **Elastic IPs**
 2. Find IP: `3.27.118.143`
 3. Click **"Actions"** → **"Associate Elastic IP address"**
-4. Get the current prod task's network interface ID:
-   ```bash
-   aws ecs list-tasks --cluster my-node-api-cluster-prod --service-name frontend-service-prod --region ap-southeast-2 --query 'taskArns[0]' --output text
-   # Then describe to get the ENI
-   ```
-5. Select that network interface
-6. Click **"Associate"**
+4. Select:
+   - Resource type: **Network interface**
+   - Network interface: **eni-018b84372d3d7726f**
+   - Private IP address: **172.31.6.82**
+5. Click **"Associate"**
 
 ---
 
