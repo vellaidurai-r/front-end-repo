@@ -78,6 +78,7 @@ jobs:
   deploy:
     needs: [determine-environment, build-and-test]
     runs-on: ubuntu-latest
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -198,3 +199,20 @@ jobs:
           echo ""
           echo "To view logs:"
           echo "  aws logs tail /ecs/frontend-$ENVIRONMENT --follow --region ${{ env.AWS_REGION }}"
+
+  # Summary
+  summary:
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Build Status
+        run: |
+          echo "✅ Frontend build completed successfully!"
+          echo ""
+          echo "Build artifacts are ready for deployment."
+          echo ""
+          echo "If deployment was skipped:"
+          echo "  - Add AWS credentials as repository secrets:"
+          echo "    - AWS_ACCESS_KEY_ID"
+          echo "    - AWS_SECRET_ACCESS_KEY"
