@@ -1,0 +1,161 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    EC2 COST QUICK REFERENCE CARD                           ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+YOUR QUESTION:
+  "If I set up backend for EC2 t2.micro, will I get any additional cost?"
+
+QUICK ANSWER:
+  ✅ NO ADDITIONAL COST
+  ✅ Year 1: FREE (AWS Free Tier)
+  ✅ Year 2+: $28.19/month (cheaper than current)
+  ✅ Year 1 vs Year 2: Same instance handles both frontend + backend
+  ✅ SAVES: $1,461.84 over 3 years vs Fargate
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COST COMPARISON (12-month basis)
+
+Current (Fargate):
+  Frontend: $354.60 (29.55 × 12)
+  Backend:  $354.60 (29.55 × 12)
+  ECR:      $3.60 (0.30 × 12)
+  ─────────────────────────────
+  TOTAL:    $712.80/year
+
+With EC2 t2.micro:
+  Year 1: $0.00 (All FREE)
+  Year 2: $338.28 ($28.19 × 12)
+  Year 3: $338.28 ($28.19 × 12)
+
+Savings:
+  Year 1: $712.80 (100% savings!)
+  Year 2: $374.52 (52% savings)
+  Year 3: $374.52 (52% savings)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+KEY FACTS
+
+1. Single EC2 t2.micro handles:
+   ✓ Frontend Dev + Staging + Prod
+   ✓ Backend Dev + Staging + Prod
+   ✓ All 6 environments on 1 instance
+   ✓ NO extra cost for backend
+
+2. What's FREE (Year 1):
+   ✓ EC2 t2.micro: 750 hours/month
+   ✓ RDS t3.micro: 750 hours/month (optional)
+   ✓ Storage: 30 GB
+   ✓ Data Transfer: 100 GB/month
+   ✓ Elastic IP: $0 when associated
+
+3. What you pay Year 2+:
+   ✓ EC2 t2.micro: $8.47/month
+   ✓ RDS t3.micro: $16.72/month
+   ✓ Storage: $3.00/month
+   ✓ Elastic IP: $0 (free)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SETUP REQUIREMENTS
+
+Time: ~40 minutes
+Difficulty: Easy (3 scripts)
+Knowledge needed: Basic AWS, Docker, CLI
+
+Components:
+  1. EC2 t2.micro (1 instance)
+  2. Elastic IP (static IP)
+  3. RDS t3.micro (optional, for database)
+  4. Docker (pre-installed on setup script)
+  5. 3 frontend containers + 3 backend containers
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ANSWERS TO COMMON QUESTIONS
+
+Q: Will backend on EC2 cost MORE than current?
+A: NO - Same instance, no extra cost
+
+Q: Do I need 2 EC2 instances (frontend + backend)?
+A: NO - 1 instance handles both (unless you want separation)
+
+Q: If I DO want 2 instances, how much extra?
+A: Year 1: Still FREE (free tier covers 2)
+   Year 2+: +$16.94/month (2nd t2.micro)
+
+Q: What if I exceed free tier?
+A: AWS notifies 30 days before expiration
+   Easy to migrate back to Fargate if needed
+
+Q: Is backend automatically FREE if frontend is EC2?
+A: YES - Same instance, same cost
+
+Q: Can I run database (RDS) for free too?
+A: YES - RDS t3.micro is FREE year 1
+
+Q: What happens after free tier ends?
+A: Standard pricing kicks in (~$28/month total)
+
+Q: Can I add more instances later?
+A: YES - Easy to scale up if needed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+RECOMMENDED SETUP
+
+Step 1: Launch 1 EC2 t2.micro instance
+        Cost: $0/month (free tier)
+
+Step 2: Deploy frontend containers (3 envs)
+        Ports: 3000, 3001, 3002
+        Cost: included in EC2
+
+Step 3: Deploy backend containers (3 envs)
+        Ports: 3100, 3101, 3102
+        Cost: NO ADDITIONAL COST
+
+Step 4: Optional - Add RDS database
+        Cost: $0/month (free tier)
+
+Total Year 1 Cost: $0.00 ✅
+Total Year 2+ Cost: ~$28.19/month
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES FOR MORE DETAILS
+
+1. EC2_COST_BREAKDOWN.md
+   → Full cost analysis with breakdown
+   → 3-year comparison
+   → All setup options
+
+2. EC2_RDS_SETUP_GUIDE.md
+   → Step-by-step setup
+   → Docker configuration
+   → Database setup
+
+3. INFRASTRUCTURE_STATUS.md
+   → Current infrastructure
+   → All environments
+   → Recommended next steps
+
+4. START_HERE.md
+   → Quick start guide
+   → 3 launch options
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FINAL ANSWER IN ONE LINE:
+
+  ✅ Setting up backend on EC2 t2.micro costs NOTHING extra and SAVES you
+     $400+ per year compared to Fargate!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Created: April 26, 2026
+Repository: vellaidurai-r/front-end-repo
+Region: ap-southeast-2
+Account: 497162053399
+
