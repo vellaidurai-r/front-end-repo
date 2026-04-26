@@ -3,6 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build arguments for environment-specific builds
+ARG VITE_ENVIRONMENT=development
+ARG VITE_BACKEND_URL=http://localhost:3000
+
+# Set environment variables for build
+ENV VITE_ENVIRONMENT=$VITE_ENVIRONMENT
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+
 # Copy package files
 COPY package.json package-lock.json ./
 
@@ -12,7 +20,7 @@ RUN npm install --legacy-peer-deps
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the application with environment variables
 RUN npm run build
 
 # Production stage
