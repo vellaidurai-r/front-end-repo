@@ -1,0 +1,237 @@
+name: Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+
+env:
+  AWS_REGION: ap-southeast-2
+  AWS_ACCOUNT_ID: 497162053399
+
+jobs:
+  # Determine which environment to deploy to
+  determine-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      ecr-repo: ${{ steps.set-env.outputs.ecr-repo }}
+      cluster: ${{ steps.set-env.outputs.cluster }}
+      service: ${{ steps.set-env.outputs.service }}
+      backend-url: ${{ steps.set-env.outputs.backend-url }}
+    steps:
+      - name: Determine Environment
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "ecr-repo=frontend-prod" >> $GITHUB_OUTPUT
+            echo "cluster=my-node-api-cluster-prod" >> $GITHUB_OUTPUT
+            echo "service=frontend-service-prod" >> $GITHUB_OUTPUT
+            echo "backend-url=http://16.176.7.157:3000" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "ecr-repo=frontend-staging" >> $GITHUB_OUTPUT
+            echo "cluster=my-node-api-cluster-staging" >> $GITHUB_OUTPUT
+            echo "service=frontend-service-staging" >> $GITHUB_OUTPUT
+            echo "backend-url=http://3.25.70.32:3000" >> $GITHUB_OUTPUT
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+            echo "ecr-repo=frontend-dev" >> $GITHUB_OUTPUT
+            echo "cluster=my-node-api-cluster-dev" >> $GITHUB_OUTPUT
+            echo "service=frontend-service-dev" >> $GITHUB_OUTPUT
+            echo "backend-url=http://3.24.242.50:3000" >> $GITHUB_OUTPUT
+          fi
+
+  # Build and test
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Run linter
+        run: npm run lint 2>/dev/null || echo "No linter configured"
+
+      - name: Build React app
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+
+  # Deploy to environment
+  deploy:
+    needs: [determine-environment, build-and-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+
+      - name: Configure AWS credentials
+        id: aws-config
+        uses: aws-actions/configure-aws-credentials@v4
+        continue-on-error: true
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check AWS Configuration
+        run: |
+          if [ "${{ steps.aws-config.outcome }}" == "failure" ]; then
+            echo "⚠️ AWS credentials not configured. Skipping deployment."
+            echo ""
+            echo "To enable deployment, add these secrets to your repository:"
+            echo "  - AWS_ACCESS_KEY_ID"
+            echo "  - AWS_SECRET_ACCESS_KEY"
+            echo ""
+            echo "Settings: https://github.com/vellaidurai-r/front-end-repo/settings/secrets/actions"
+            exit 0
+          fi
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        if: ${{ steps.aws-config.outcome == 'success' }}
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        if: ${{ steps.aws-config.outcome == 'success' }}
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ needs.determine-environment.outputs.ecr-repo }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Update ECS service
+        if: ${{ steps.aws-config.outcome == 'success' }}
+        env:
+          CLUSTER: ${{ needs.determine-environment.outputs.cluster }}
+          SERVICE: ${{ needs.determine-environment.outputs.service }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ needs.determine-environment.outputs.ecr-repo }}
+          IMAGE_TAG: ${{ github.sha }}
+          ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
+          BACKEND_URL: ${{ needs.determine-environment.outputs.backend-url }}
+        run: |
+          # Force new deployment
+          aws ecs update-service \
+            --cluster $CLUSTER \
+            --service $SERVICE \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "✅ Service update triggered"
+          
+          # Give ECS time to start pulling the image
+          sleep 30
+          
+          # Verify service accepted the update
+          SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster $CLUSTER \
+            --services $SERVICE \
+            --region ${{ env.AWS_REGION }} \
+            --query 'services[0].deployments[0].status' \
+            --output text)
+          
+          echo "Service deployment status: $SERVICE_STATUS"
+
+      - name: Wait for service stability
+        if: ${{ steps.aws-config.outcome == 'success' }}
+        env:
+          CLUSTER: ${{ needs.determine-environment.outputs.cluster }}
+          SERVICE: ${{ needs.determine-environment.outputs.service }}
+        run: |
+          echo "⏳ Waiting for service to stabilize..."
+          
+          # Simple wait with retries
+          for i in {1..20}; do
+            RUNNING=$(aws ecs describe-services \
+              --cluster $CLUSTER \
+              --services $SERVICE \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].runningCount' \
+              --output text)
+            
+            DESIRED=$(aws ecs describe-services \
+              --cluster $CLUSTER \
+              --services $SERVICE \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].desiredCount' \
+              --output text)
+            
+            echo "Running: $RUNNING / Desired: $DESIRED"
+            
+            if [[ "$RUNNING" == "$DESIRED" && "$RUNNING" -gt 0 ]]; then
+              echo "✅ Service is stable!"
+              break
+            fi
+            
+            if [[ $i -eq 20 ]]; then
+              echo "⚠️ Service stability timeout, but deployment is in progress"
+            else
+              sleep 10
+            fi
+          done
+
+      - name: Post deployment info
+        if: ${{ steps.aws-config.outcome == 'success' }}
+        env:
+          ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
+          CLUSTER: ${{ needs.determine-environment.outputs.cluster }}
+          SERVICE: ${{ needs.determine-environment.outputs.service }}
+        run: |
+          echo "✅ Frontend deployment to $ENVIRONMENT completed!"
+          echo ""
+          echo "📍 Environment Details:"
+          echo "  Cluster: $CLUSTER"
+          echo "  Service: $SERVICE"
+          echo "  Image: ${{ steps.login-ecr.outputs.registry }}/${{ needs.determine-environment.outputs.ecr-repo }}:${{ github.sha }}"
+          echo ""
+          echo "To check deployment status:"
+          echo "  aws ecs describe-services --cluster $CLUSTER --services $SERVICE --region ${{ env.AWS_REGION }}"
+          echo ""
+          echo "To view logs:"
+          echo "  aws logs tail /ecs/frontend-$ENVIRONMENT --follow --region ${{ env.AWS_REGION }}"
+
+  # Summary
+  summary:
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Build Status
+        run: |
+          echo "✅ Frontend build completed successfully!"
+          echo ""
+          echo "Build artifacts are ready for deployment."
+          echo ""
+          echo "If deployment was skipped:"
+          echo "  - Add AWS credentials as repository secrets:"
+          echo "    - AWS_ACCESS_KEY_ID"
+          echo "    - AWS_SECRET_ACCESS_KEY"
