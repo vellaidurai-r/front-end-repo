@@ -58,7 +58,7 @@ function App() {
           <div className="bg-white rounded-lg shadow-lg p-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Welcome</h2>
             <p className="text-gray-600 mb-6">
-              This is a React applications built with Vite, TypeScript, and Tailwind CSS deployed to {environment}.
+              This is a React applicationss built with Vite, TypeScript, and Tailwind CSS deployed to {environment}.
             </p>
             <button
               onClick={() => setCount(count + 1)}
