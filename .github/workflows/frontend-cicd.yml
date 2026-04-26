@@ -6,9 +6,6 @@ on:
       - main
       - develop
       - staging
-    paths:
-      - 'front-end/**'
-      - '.github/workflows/frontend-cicd.yml'
 
 env:
   AWS_REGION: ap-southeast-2
@@ -63,25 +60,19 @@ jobs:
           cache-dependency-path: '**/package-lock.json'
 
       - name: Install dependencies
-        run: |
-          cd front-end
-          npm ci
+        run: npm ci
 
       - name: Run linter
-        run: |
-          cd front-end
-          npm run lint 2>/dev/null || echo "No linter configured"
+        run: npm run lint 2>/dev/null || echo "No linter configured"
 
       - name: Build React app
-        run: |
-          cd front-end
-          npm run build
+        run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: front-end/dist/
+          path: dist/
 
   # Deploy to environment
   deploy:
@@ -95,7 +86,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-dist
-          path: front-end/dist/
+          path: dist/
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -114,7 +105,6 @@ jobs:
           ECR_REPOSITORY: ${{ needs.determine-environment.outputs.ecr-repo }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          cd front-end
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
